@@ -156,6 +156,10 @@ public class Client extends Thread {
 				gui.startGame(params.get("setup"));
 				break;
 			}
+			break;
+		case "userjoin":
+			Data.writeToLog(toExecute);
+			break;
 		}
 		gui.setStatus();
 	}
