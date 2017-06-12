@@ -7,12 +7,15 @@ import java.util.HashMap;
 
 import javax.swing.JOptionPane;
 
+import org.tritol.client.IClient;
+import org.tritol.server.GameExchange;
+
 import dataManagement.Data;
 import userInterface.GUI;
 
-public class Client extends Thread {
+public class Client extends Thread implements IClient {
 	public boolean write = true;
-	private PrintStream os = null;
+	private ObjectOutputStream oos = null;
 
 	private boolean connected = false;
 	private boolean loggedIn = false;
@@ -57,7 +60,7 @@ public class Client extends Thread {
 		try {
 
 			clientSocket = new Socket(host, port);
-			os = new PrintStream(clientSocket.getOutputStream());
+			oos = new ObjectOutputStream(clientSocket.getOutputStream());
 
 		} catch (UnknownHostException e) {
 			System.err.println("Don't know about host");
@@ -69,7 +72,7 @@ public class Client extends Thread {
 		 * If everything has been initialized then we want to write some data to
 		 * the socket we have opened a connection to on port 2222.
 		 */
-		if (clientSocket != null && os != null) {
+		if (clientSocket != null && oos != null) {
 
 			connected = true;
 
@@ -101,7 +104,7 @@ public class Client extends Thread {
 				 * Close the output stream, close the input stream, close the
 				 * socket.
 				 */
-				os.close();
+				oos.close();
 				clientSocket.close();
 
 			} catch (UnknownHostException e) {
@@ -125,12 +128,75 @@ public class Client extends Thread {
 		Client.port = port;
 	}
 
-	public void execute(String toExecute) {
-		String[] split = toExecute.split("\\?");
-		String command = split[0];
-		HashMap<String, String> params = Data.parseParameters(split[1], "&");
+	/**
+	 * Stops the client by sending a request to the server
+	 */
+	public void terminate() {
+		try {
+			listener.terminate();
+			GUI.setClient(null);
+			write = false;
+			sendDataToServer("disconnect","");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
-		switch (command) {
+	public void register(String name, String pw) {
+		GameExchange response = new GameExchange();
+
+		response.setMethod("register");
+		response.setBody("name=" + name + "&password=" + pw);
+
+		sendDataToServer(response);
+
+	}
+
+	public void login(String name, String pw) {
+		GameExchange response = new GameExchange();
+
+		response.setMethod("login");
+		response.setBody("name=" + name + "&password=" + pw);
+
+		sendDataToServer(response);
+	}
+
+	public void setStatus() {
+		gui.setStatus();
+	}
+
+	public void popup(String message) {
+		gui.popup(message);
+	}
+
+	public void blockGame() {
+		gui.blockGame();
+	}
+	
+	public void sendDataToServer(GameExchange exchange){
+		System.out.println(exchange);
+		try {
+			oos.writeObject(exchange);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+	}
+
+	public void sendDataToServer(String method, String body) {
+		GameExchange response = new GameExchange(method, body);
+		try {
+			oos.writeObject(response);
+		} catch (IOException | NullPointerException e) {
+			System.err.println("No Connection");
+		}
+	}
+
+	@Override
+	public void handle(GameExchange exchange) {
+		HashMap<String, String> params = exchange.toHashMap();
+
+		switch (exchange.getMethod()) {
 		case "register":
 			if (params.get("register").equals("true")) {
 				JOptionPane.showMessageDialog(null, "Registrierung erfolgreich");
@@ -158,54 +224,10 @@ public class Client extends Thread {
 			}
 			break;
 		case "userjoin":
-			Data.writeToLog(toExecute);
+			Data.writeToLog(exchange.getBody());
 			break;
 		}
 		gui.setStatus();
-	}
 
-	/**
-	 * Stops the client by sending a request to the server
-	 */
-	public void terminate() {
-		try {
-			listener.terminate();
-			GUI.setClient(null);
-			write = false;
-			sendDataToServer("disconnect");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
-	public void register(String name, String pw) {
-		os.println("register?name=" + name + "&password=" + pw);
-		os.flush();
-	}
-
-	public void login(String name, String pw) {
-		os.println("login?name=" + name + "&password=" + pw);
-		os.flush();
-	}
-	
-	public void setStatus(){
-		gui.setStatus();
-	}
-	
-	public void popup(String message){
-		gui.popup(message);
-	}
-	
-	public void blockGame(){
-		gui.blockGame();
-	}
-
-	public void sendDataToServer(String data) {
-		try {
-			os.println(data);
-			os.flush();
-		} catch (NullPointerException e) {
-			System.err.println("No connection");
-		}
 	}
 }

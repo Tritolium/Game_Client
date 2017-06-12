@@ -4,6 +4,8 @@ import java.awt.BorderLayout;
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 
 import javax.swing.JDialog;
 import javax.swing.JFrame;
@@ -31,6 +33,7 @@ public class GUI extends JFrame {
 	protected Window gameWindow;
 	protected ConnectDialog connect;
 	private JLabel lblStatus;
+	private GamePanel gamePanel;
 	protected static GUI frame;
 	private static Client client;
 
@@ -159,7 +162,7 @@ public class GUI extends JFrame {
 				if (client != null && client.isConnected()) {
 					if (client.isLoggedIn()) {
 						// TODO order CreateGame from Server
-						client.sendDataToServer("joingame?game=Catan");
+						client.sendDataToServer("joingame","game=Catan");
 						/*
 						 * setup: 0-18: tileres 19-37: tiledice 38-55: portres
 						 * 56-73: portori
@@ -199,22 +202,26 @@ public class GUI extends JFrame {
 		});
 		contentPane.setLayout(new BorderLayout(0, 0));
 
-		JPanel panel = new JPanel();
-		contentPane.add(panel, BorderLayout.EAST);
-
-		JLabel lblIchBinEin = new JLabel("Ich bin ein Men\u00FC");
-		panel.add(lblIchBinEin);
-
 		lblStatus = new JLabel("");
 		lblStatus.setHorizontalAlignment(SwingConstants.LEFT);
 		contentPane.add(lblStatus, BorderLayout.SOUTH);
 
+		
+		this.addComponentListener(new ComponentAdapter(){
+			public void componentResized(ComponentEvent e){
+				repaint();
+			}
+		});
 	}
 
 	public void startGame(String setup) {
+		gamePanel = new GamePanel();
+		
 		gameWindow = new Window();
 		gameWindow.init(setup);
-		contentPane.add(gameWindow, BorderLayout.CENTER);
+		
+		gamePanel.addComponent(gameWindow, BorderLayout.CENTER);
+		contentPane.add(gamePanel, BorderLayout.CENTER);
 		contentPane.repaint();
 		contentPane.validate();
 	}
@@ -238,5 +245,9 @@ public class GUI extends JFrame {
 		}else{
 			lblStatus.setText("Nicht verbunden");
 		}
+	}
+	
+	public void writeGameInfo(String info){
+		gamePanel.writeInfo(info);
 	}
 }

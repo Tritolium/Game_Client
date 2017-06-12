@@ -4,11 +4,13 @@ import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
 
+import org.tritol.server.GameExchange;
+
 public class ClientListener extends Thread {
 
 	private Client client;
 	private Socket clientSocket;
-	private BufferedReader is;
+	private ObjectInputStream ois;
 	private boolean running = true;
 
 	public ClientListener(Client client, Socket clientSocket) {
@@ -18,18 +20,18 @@ public class ClientListener extends Thread {
 
 	public void run() {
 		try {
-			String responseLine;
-			is = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+			GameExchange response;
+			ois = new ObjectInputStream(clientSocket.getInputStream());
 
 			while (running) {
-				responseLine = is.readLine();
-				if (responseLine.indexOf("disconnect") != -1) {
+				response = (GameExchange) ois.readObject();
+				if (response.getMethod()=="disconnect") {
 					client.write = false;
 					client.setStatus();
 					break;
 				}
-				client.execute(responseLine);
-				System.out.println(responseLine);
+				client.handle(response);
+				System.out.println(response);
 			}
 		} catch(SocketException e){
 			System.err.println("Connection-Reset");
@@ -38,6 +40,8 @@ public class ClientListener extends Thread {
 			client.popup("Lost connection to Server");
 			client.blockGame();
 		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
 		}
 
