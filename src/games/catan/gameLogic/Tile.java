@@ -37,14 +37,17 @@ public class Tile {
 
 	public static Tile[] generateTiles(String s) {
 		tiles = new Tile[37];
-
+		//0-18 res
+		//19-37 dice auf 0-18
+		//38-55 res auf wasser
+		//56-73 ori auf wasser
+		
 		for (int i = 0; i < 19; i++) {
 			tiles[i] = new Tile(i, Character.getNumericValue(s.charAt(i)), Character.getNumericValue(s.charAt(i + 19)));
 		}
 		for (int i = 19; i < 37; i++) {
-			tiles[i] = new Tile(i, 6, -1);
+			tiles[i] = new Tile(i, Character.getNumericValue(s.charAt(i + 19)), Character.getNumericValue(s.charAt(i + 19 + 18)));
 		}
-		// TODO Handling for water-tiles
 		return tiles;
 	}
 }
